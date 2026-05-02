@@ -23,3 +23,14 @@ model User {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }
+// prisma/schema.prisma ke aakhir mein yeh add karein:
+
+model Message {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  senderEmail   String   // Kisne message bheja
+  senderName    String   // Bhejne wale ka naam
+  receiverEmail String   // Kisko bheja (Agar group hai toh hum "GROUP" likhenge)
+  className     String   // Kis class ka message hai
+  text          String   // Message ka text
+  createdAt     DateTime @default(now())
+}
