@@ -9,11 +9,11 @@ export default function DashboardPage() {
   const { data: session, status } = useSession();
 
   // Data save karne ke liye states
-  const [classFellows, setClassFellows] = useState([]);
-  const[teachers, setTeachers] = useState([]);
-  const [myClass, setMyClass] = useState("");
+  const[classFellows, setClassFellows] = useState([]);
+  const [teachers, setTeachers] = useState([]);
+  const[myClass, setMyClass] = useState("");
   const [showTeachers, setShowTeachers] = useState(false); // Button click control karne ke liye
-  const[loadingData, setLoadingData] = useState(true);
+  const [loadingData, setLoadingData] = useState(true);
 
   // Security: Agar login nahi hai toh wapas bhej do
   useEffect(() => {
@@ -42,7 +42,7 @@ export default function DashboardPage() {
       };
       fetchData();
     }
-  }, [session]);
+  },[session]);
 
   if (status === "loading" || loadingData) {
     return <div className="min-h-screen flex items-center justify-center text-xl text-black">Data Load ho raha hai...</div>;
@@ -62,18 +62,35 @@ export default function DashboardPage() {
                 Roll No: <span className="font-bold">{session.user.rollNumber}</span>
               </p>
             </div>
-            <button 
-              onClick={() => signOut({ callbackUrl: "/login" })} 
-              className="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-lg font-semibold transition-all shadow"
-            >
-              Logout
-            </button>
-            <button 
-  onClick={() => router.push("/chat")} 
-  className="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-lg font-semibold transition-all shadow mr-2"
->
-  Go to Chat
-</button>
+            
+            {/* Buttons Container */}
+            <div className="flex items-center">
+              
+              {/* Smart Chat Button: Student ko Student Chat, Teacher ko Teacher Chat */}
+              {session.user.role === "student" ? (
+                <button 
+                  onClick={() => router.push("/chat")} 
+                  className="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-lg font-semibold transition-all shadow mr-3"
+                >
+                  Student Chat
+                </button>
+              ) : (
+                <button 
+                  onClick={() => router.push("/teacher-chat")} 
+                  className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded-lg font-semibold transition-all shadow mr-3"
+                >
+                  Teacher Chat
+                </button>
+              )}
+
+              {/* Logout Button */}
+              <button 
+                onClick={() => signOut({ callbackUrl: "/login" })} 
+                className="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-lg font-semibold transition-all shadow"
+              >
+                Logout
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -136,7 +153,7 @@ export default function DashboardPage() {
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-gray-500 italic">no register register.</p>
+                    <p className="text-gray-500 italic">no teacher register.</p>
                   )}
                 </div>
               )}
