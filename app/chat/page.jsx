@@ -8,13 +8,16 @@ export default function ChatPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  const[classFellows, setClassFellows] = useState([]);
-  const [messages, setMessages] = useState([]);
-  const[currentMessage, setCurrentMessage] = useState("");
-  const [selectedChat, setSelectedChat] = useState("GROUP"); 
+  const [classFellows, setClassFellows] = useState([]);
+  const[messages, setMessages] = useState([]);
+  const [currentMessage, setCurrentMessage] = useState("");
+  
+  // Ab default koi select nahi hoga (null rakha hai)
+  const [selectedFellow, setSelectedFellow] = useState(null); 
   
   const messagesEndRef = useRef(null);
 
+  // Security check
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
   }, [status, router]);
@@ -32,7 +35,7 @@ export default function ChatPage() {
     }
   }, [session]);
 
-  // 2. Background Auto-Refresh (Polling)
+  // 2. Background Auto-Refresh (Polling) - Har 2 second baad
   useEffect(() => {
     if (!session?.user) return;
 
@@ -40,7 +43,6 @@ export default function ChatPage() {
       fetch("/api/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // YAHAN CHANGE KIYA HAI: Ab hum sirf email bhej rahe hain
         body: JSON.stringify({ email: session.user.email }), 
       })
       .then(res => res.json())
@@ -56,25 +58,25 @@ export default function ChatPage() {
     const interval = setInterval(fetchMessages, 2000); 
 
     return () => clearInterval(interval);
-  }, [session]);
+  },[session]);
 
-  // Auto-scroll
+  // Auto-scroll jab naya message aaye
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   // Message Bhejne ka function
   const sendMessage = async () => {
-    if (currentMessage.trim() === "") return;
+    if (currentMessage.trim() === "" || !selectedFellow) return;
 
     const msgData = {
       senderEmail: session.user.email,
       senderName: session.user.name,
-      receiverEmail: selectedChat,
+      receiverEmail: selectedFellow.email, // Jisko select kiya hai uska email
       text: currentMessage,
     };
 
-    // Fauran screen par dikhane ke liye
+    // UI mein fauran dikhane ke liye
     setMessages((prev) => [...prev, msgData]);
     setCurrentMessage(""); 
 
@@ -86,16 +88,13 @@ export default function ChatPage() {
     });
   };
 
-  // Messages Filter Logic
+  // Messages Filter Logic (Sirf mere aur selected dost ke darmiyan wali chat)
   const filteredMessages = messages.filter((msg) => {
-    if (selectedChat === "GROUP") {
-      return msg.receiverEmail === "GROUP";
-    } else {
-      return (
-        (msg.senderEmail === session?.user?.email && msg.receiverEmail === selectedChat) ||
-        (msg.senderEmail === selectedChat && msg.receiverEmail === session?.user?.email)
-      );
-    }
+    if (!selectedFellow) return false;
+    return (
+      (msg.senderEmail === session?.user?.email && msg.receiverEmail === selectedFellow.email) ||
+      (msg.senderEmail === selectedFellow.email && msg.receiverEmail === session?.user?.email)
+    );
   });
 
   if (status === "loading") return <div className="p-10 text-center text-black">Loading Chat...</div>;
@@ -103,71 +102,100 @@ export default function ChatPage() {
   return (
     <div className="min-h-screen flex bg-gray-100 text-black">
       
-      {/* LEFT SIDEBAR */}
+      {/* LEFT SIDEBAR: Sirf Class Fellows ki List */}
       <div className="w-1/3 bg-white border-r p-4 shadow-md overflow-y-auto">
-        <h2 className="text-xl font-bold mb-4 text-blue-600">Chats</h2>
+        <h2 className="text-xl font-bold mb-4 text-blue-600">My Class ({session?.user?.className})</h2>
         
-        <div 
-          onClick={() => setSelectedChat("GROUP")}
-          className={`p-3 mb-2 cursor-pointer rounded font-bold transition-all ${selectedChat === "GROUP" ? "bg-blue-500 text-white shadow" : "bg-gray-200 hover:bg-gray-300"}`}
-        >
-          🏫 Class Group Chat
-        </div>
+        <h3 className="font-semibold text-gray-500 mb-3 border-b pb-2">Select a Class Fellow</h3>
 
-        <hr className="my-4" />
-        <h3 className="font-semibold text-gray-500 mb-2">Class Fellows</h3>
-
-        {classFellows.map((fellow) => (
-          <div 
-            key={fellow.email}
-            onClick={() => setSelectedChat(fellow.email)}
-            className={`p-3 mb-2 cursor-pointer rounded transition-all ${selectedChat === fellow.email ? "bg-green-500 text-white shadow" : "bg-gray-100 hover:bg-gray-200"}`}
-          >
-            {fellow.name} <span className="text-xs block opacity-70">{fellow.rollNumber}</span>
-          </div>
-        ))}
+        {classFellows.length === 0 ? (
+          <p className="text-sm text-gray-400 italic">Aapki class mein abhi koi aur nahi hai.</p>
+        ) : (
+          classFellows.map((fellow) => {
+            const isSelected = selectedFellow?.email === fellow.email;
+            return (
+              <div 
+                key={fellow.email}
+                onClick={() => setSelectedFellow(fellow)}
+                className={`p-3 mb-2 cursor-pointer rounded transition-all flex justify-between items-center ${isSelected ? "bg-green-500 text-white shadow-md" : "bg-gray-50 hover:bg-gray-200 border"}`}
+              >
+                <div>
+                  <p className="font-bold">{fellow.name}</p>
+                  <p className={`text-xs ${isSelected ? "text-green-100" : "text-gray-500"}`}>{fellow.email}</p>
+                </div>
+                <span className={`text-xs px-2 py-1 rounded font-bold ${isSelected ? "bg-green-600 text-white" : "bg-gray-200 text-gray-600"}`}>
+                  {fellow.rollNumber}
+                </span>
+              </div>
+            )
+          })
+        )}
       </div>
 
       {/* RIGHT SIDE: Chat Box */}
       <div className="w-2/3 flex flex-col bg-gray-50 h-screen">
         
-        <div className="bg-white p-4 shadow border-b">
-          <h2 className="text-xl font-bold">
-            {selectedChat === "GROUP" ? "🏫 Class Group Chat" : `Chatting with: ${classFellows.find(f => f.email === selectedChat)?.name || ""}`}
-          </h2>
-        </div>
-
-        <div className="flex-1 p-4 overflow-y-auto space-y-3">
-          {filteredMessages.map((msg, index) => {
-            const isMe = msg.senderEmail === session?.user?.email;
-            return (
-              <div key={index} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
-                <div className={`p-3 rounded-lg max-w-md shadow ${isMe ? "bg-blue-500 text-white rounded-br-none" : "bg-white border text-black rounded-bl-none"}`}>
-                  {selectedChat === "GROUP" && !isMe && (
-                    <span className="text-xs font-bold block text-blue-600 mb-1">{msg.senderName}</span>
-                  )}
-                  {msg.text}
-                </div>
+        {/* Agar kisi dost ko select nahi kiya toh yeh screen dikhao */}
+        {!selectedFellow ? (
+          <div className="flex-1 flex items-center justify-center flex-col text-gray-400">
+            <svg className="w-20 h-20 mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+            <h2 className="text-2xl font-bold text-gray-500">Your Messages</h2>
+            <p>Left side se kisi class fellow ko select karein aur chat shuru karein.</p>
+          </div>
+        ) : (
+          /* Agar dost select kar liya hai toh Chat Box dikhao */
+          <>
+            {/* Chat Header */}
+            <div className="bg-white p-4 shadow border-b flex items-center">
+              <div className="w-10 h-10 bg-green-500 text-white rounded-full flex items-center justify-center font-bold text-xl mr-3">
+                {selectedFellow.name.charAt(0).toUpperCase()}
               </div>
-            );
-          })}
-          <div ref={messagesEndRef} />
-        </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-800">{selectedFellow.name}</h2>
+                <p className="text-xs text-gray-500">Roll No: {selectedFellow.rollNumber}</p>
+              </div>
+            </div>
 
-        <div className="p-4 bg-white border-t flex">
-          <input 
-            type="text" 
-            value={currentMessage}
-            onChange={(e) => setCurrentMessage(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-            placeholder="Type a message..." 
-            className="flex-1 border p-3 rounded-l-lg outline-none focus:ring-2 focus:ring-blue-400"
-          />
-          <button onClick={sendMessage} className="bg-blue-600 text-white px-8 py-3 rounded-r-lg font-bold hover:bg-blue-700 transition-all">
-            Send
-          </button>
-        </div>
+            {/* Messages Area */}
+            <div className="flex-1 p-4 overflow-y-auto space-y-3">
+              {filteredMessages.length === 0 ? (
+                <div className="text-center text-gray-400 mt-10 text-sm italic">
+                  Say hi to {selectedFellow.name}!
+                </div>
+              ) : (
+                filteredMessages.map((msg, index) => {
+                  const isMe = msg.senderEmail === session?.user?.email;
+                  return (
+                    <div key={index} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
+                      <div className={`p-3 rounded-lg max-w-md shadow ${isMe ? "bg-blue-500 text-white rounded-br-none" : "bg-white border text-black rounded-bl-none"}`}>
+                        {msg.text}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+              <div ref={messagesEndRef} />
+            </div>
 
+            {/* Input Area */}
+            <div className="p-4 bg-white border-t flex">
+              <input 
+                type="text" 
+                value={currentMessage}
+                onChange={(e) => setCurrentMessage(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                placeholder={`Message ${selectedFellow.name}...`} 
+                className="flex-1 border p-3 rounded-l-lg outline-none focus:ring-2 focus:ring-blue-400"
+              />
+              <button 
+                onClick={sendMessage} 
+                className="bg-blue-600 text-white px-8 py-3 rounded-r-lg font-bold hover:bg-blue-700 transition-all"
+              >
+                Send
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
