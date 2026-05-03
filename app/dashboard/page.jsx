@@ -82,7 +82,18 @@ export default function DashboardPage() {
                   Teacher Chat
                 </button>
               )}
-
+<button 
+  onClick={() => router.push("/papers")} 
+  className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg font-semibold transition-all shadow mr-3"
+>
+  Research Papers
+</button>
+<button 
+  onClick={() => router.push("/explore")} 
+  className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-semibold transition-all shadow mr-3"
+>
+  Explore Library
+</button>
               {/* Logout Button */}
               <button 
                 onClick={() => signOut({ callbackUrl: "/login" })} 

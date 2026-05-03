@@ -34,3 +34,15 @@ model Message {
   text          String   // Message ka text
   createdAt     DateTime @default(now())
 }
+// prisma/schema.prisma ke aakhir mein add karein:
+
+model ResearchPaper {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  content     String
+  authorEmail String
+  authorName  String
+  authorRole  String   // Student ya Teacher
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
